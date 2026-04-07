@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tower of Hanoi — Interactive Solver</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --gold: #c9a84c; --gold-light: #e8c97a; --gold-dark: #8a6520;
+      --bg: #0d0d0f; --border: rgba(255,255,255,0.09);
+      --text: #e8e6dc; --text-dim: rgba(232,230,220,0.45);
+      --sans: -apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+      --mono: 'Courier New',Courier,monospace;
+    }
+    html,body { min-height:100vh; background:var(--bg); color:var(--text); font-family:var(--sans); }
+    body { display:flex; flex-direction:column; align-items:center; padding:36px 16px 60px; }
+    header { text-align:center; margin-bottom:32px; }
+    header h1 { font-size:36px; font-weight:800; letter-spacing:-1px; }
+    header h1 span { color:var(--gold); }
+    header p { margin-top:8px; font-size:14px; color:var(--text-dim); max-width:480px; line-height:1.6; }
+    .card { width:100%; max-width:820px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:16px; padding:28px 28px 32px; margin-bottom:20px; }
+    .card-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.12em; color:var(--text-dim); margin-bottom:16px; }
+    .controls { display:flex; align-items:center; flex-wrap:wrap; gap:14px; }
+    .disk-group { display:flex; align-items:center; gap:10px; }
+    .n-label { font-size:13px; font-weight:600; color:var(--text-dim); text-transform:uppercase; letter-spacing:.06em; }
+    .n-display { font-family:var(--mono); font-size:30px; font-weight:700; color:var(--gold); min-width:42px; text-align:center; }
+    input[type=range] { -webkit-appearance:none; appearance:none; width:180px; height:4px; border-radius:2px; background:rgba(255,255,255,0.15); outline:none; cursor:pointer; }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:var(--gold); cursor:pointer; }
+    input[type=range]::-moz-range-thumb { width:18px; height:18px; border-radius:50%; background:var(--gold); cursor:pointer; border:none; }
+    .btn { font-family:var(--sans); font-size:13px; font-weight:700; padding:9px 20px; border-radius:7px; border:1px solid rgba(255,255,255,0.14); cursor:pointer; transition:all .14s; }
+    .btn-primary { background:var(--gold); color:#0d0d0f; border-color:var(--gold); }
+    .btn-primary:hover:not(:disabled) { background:var(--gold-light); }
+    .btn-primary:disabled { opacity:.38; cursor:not-allowed; }
+    .btn-ghost { background:transparent; color:rgba(232,230,220,.65); }
+    .btn-ghost:hover:not(:disabled) { background:rgba(255,255,255,.07); color:var(--text); }
+    .speed-group { display:flex; align-items:center; gap:7px; font-size:12px; color:var(--text-dim); margin-left:auto; }
+    .speed-group select { font-family:var(--mono); font-size:12px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); color:var(--text); border-radius:5px; padding:5px 10px; cursor:pointer; outline:none; }
+    #hanoi-canvas { display:block; width:100%; height:220px; border-radius:10px; margin:20px 0 10px; background:rgba(255,255,255,.015); }
+    .progress-wrap { height:3px; background:rgba(255,255,255,.07); border-radius:2px; margin-bottom:20px; overflow:hidden; }
+    .progress-fill { height:100%; background:linear-gradient(90deg,var(--gold-dark),var(--gold)); border-radius:2px; width:0%; transition:width .25s; }
+    .stats-bar { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:20px; }
+    .stat-card { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.07); border-radius:9px; padding:12px 16px; text-align:center; }
+    .stat-label { font-size:10px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--text-dim); margin-bottom:5px; }
+    .stat-value { font-family:var(--mono); font-size:22px; font-weight:700; color:var(--gold); }
+    .done-msg { text-align:center; font-size:15px; font-weight:700; color:var(--gold); padding:10px; display:none; }
+    .formula-block { margin-bottom:16px; }
+    .formula-main { font-family:var(--mono); font-size:20px; color:var(--text); margin-bottom:6px; }
+    .formula-main .hl { color:var(--gold); }
+    .formula-sub { font-family:var(--mono); font-size:14px; color:rgba(232,230,220,.6); }
+    .formula-sub .hl { color:var(--gold-light); }
+    .formula-sub .dim { color:rgba(232,230,220,.3); }
+    .section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--text-dim); margin:18px 0 10px; }
+    .trace-table { width:100%; border-collapse:collapse; font-family:var(--mono); font-size:13px; }
+    .trace-table th { text-align:left; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-dim); padding:5px 8px; border-bottom:1px solid rgba(255,255,255,.07); font-family:var(--sans); font-weight:700; }
+    .trace-table td { padding:6px 8px; color:rgba(232,230,220,.45); border-bottom:1px solid rgba(255,255,255,.04); transition:color .3s,background .3s; }
+    .trace-table tr.trace-active td { color:var(--gold-light); background:rgba(201,168,76,.08); }
+    .trace-table tr.trace-done td { color:rgba(232,230,220,.22); }
+    .move-log { background:rgba(255,255,255,.02); border:1px solid rgba(255,255,255,.06); border-radius:9px; padding:12px 16px; height:120px; overflow-y:auto; font-family:var(--mono); font-size:12px; color:rgba(232,230,220,.45); }
+    .move-log::-webkit-scrollbar { width:4px; }
+    .move-log::-webkit-scrollbar-thumb { background:rgba(255,255,255,.1); border-radius:2px; }
+    .move-entry { padding:3px 0; border-bottom:1px solid rgba(255,255,255,.04); }
+    .move-entry.latest { color:var(--gold-light); }
+    .two-col { display:grid; grid-template-columns:1fr 1fr; gap:20px; max-width:820px; width:100%; }
+    footer { margin-top:12px; font-size:12px; color:rgba(232,230,220,.2); text-align:center; font-family:var(--mono); }
+    @media(max-width:620px) { .two-col { grid-template-columns:1fr; } header h1 { font-size:26px; } .speed-group { margin-left:0; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Tower of <span>Hanoi</span></h1>
+    <p>Interactive solver &mdash; set the number of disks, watch the optimal solution unfold, and trace the recursive math in real time.</p>
+  </header>
+
+  <div class="card" style="max-width:820px;">
+    <div class="card-label">Puzzle Solver</div>
+    <div class="controls">
+      <div class="disk-group">
+        <span class="n-label">Disks</span>
+        <input type="range" id="disk-slider" min="1" max="8" value="3" step="1" oninput="onSlider(this.value)">
+        <span class="n-display" id="n-val">3</span>
+      </div>
+      <button class="btn btn-primary" id="btn-play" onclick="startAnim()">Solve &#9654;</button>
+      <button class="btn btn-ghost" id="btn-reset" onclick="resetAll()">&#8635; Reset</button>
+      <div class="speed-group">
+        Speed
+        <select id="speed-sel">
+          <option value="900">Slow</option>
+          <option value="450" selected>Normal</option>
+          <option value="160">Fast</option>
+          <option value="40">Turbo</option>
+        </select>
+      </div>
+    </div>
+    <canvas id="hanoi-canvas"></canvas>
+    <div class="progress-wrap"><div class="progress-fill" id="prog-fill"></div></div>
+    <div class="stats-bar">
+      <div class="stat-card"><div class="stat-label">Current Move</div><div class="stat-value" id="stat-move">0</div></div>
+      <div class="stat-card"><div class="stat-label">Total (2&#8319;&minus;1)</div><div class="stat-value" id="stat-total">7</div></div>
+      <div class="stat-card"><div class="stat-label">Remaining</div><div class="stat-value" id="stat-rem">7</div></div>
+    </div>
+    <div class="done-msg" id="done-msg">&#10003; Solved in <span id="done-count"></span> moves &mdash; provably optimal!</div>
+  </div>
+
+  <div class="two-col">
+    <div class="card">
+      <div class="card-label">Mathematical Depth</div>
+      <div class="formula-block">
+        <div class="formula-main">T(n) = <span class="hl">2&#8319; &minus; 1</span></div>
+        <div class="formula-sub" style="margin-bottom:8px;">Minimum moves with n disks</div>
+        <div class="formula-sub">
+          n = <span class="hl" id="fn-val">3</span>
+          <span class="dim"> &rarr; </span>
+          T(<span class="hl" id="fn-n2">3</span>) = 2<sup id="fn-exp">3</sup> &minus; 1
+          = <span class="hl" id="fn-result">7</span>
+        </div>
+      </div>
+      <div class="section-title">Recursive Trace &mdash; T(k) = 2&middot;T(k&minus;1) + 1</div>
+      <table class="trace-table">
+        <thead><tr><th>k</th><th>Recurrence</th><th>Value</th></tr></thead>
+        <tbody id="trace-body"></tbody>
+      </table>
+      <div style="margin-top:14px;font-size:12px;color:var(--text-dim);line-height:1.8;font-family:var(--mono);">
+        <strong style="color:rgba(232,230,220,.5);">Why?</strong> To move n disks:<br>
+        1. Move top n&minus;1 to spare &rarr; T(n&minus;1) moves<br>
+        2. Move largest to target &rarr; 1 move<br>
+        3. Move n&minus;1 onto largest &rarr; T(n&minus;1) moves<br>
+        &there4; T(n) = 2&middot;T(n&minus;1) + 1 &rarr; <span style="color:var(--gold)">2&#8319; &minus; 1</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Move Log</div>
+      <div class="section-title">Step-by-step moves</div>
+      <div class="move-log" id="move-log">
+        <div style="color:rgba(232,230,220,.2);">Moves appear here as animation plays...</div>
+      </div>
+      <div style="margin-top:18px;">
+        <div class="section-title">Peg Legend</div>
+        <div style="font-family:var(--mono);font-size:13px;line-height:2;color:rgba(232,230,220,.55);">
+          <span style="color:var(--gold)">A</span> &mdash; Source (left)<br>
+          <span style="color:var(--gold)">B</span> &mdash; Auxiliary (middle)<br>
+          <span style="color:var(--gold)">C</span> &mdash; Target (right)
+        </div>
+      </div>
+      <div style="margin-top:18px;">
+        <div class="section-title">Key Properties</div>
+        <div style="font-family:var(--mono);font-size:12px;line-height:2;color:rgba(232,230,220,.45);">
+          Time complexity: <span style="color:var(--gold)">O(2&#8319;)</span><br>
+          Space complexity: <span style="color:var(--gold)">O(n)</span> stack frames<br>
+          Algorithm type: <span style="color:var(--gold)">Divide &amp; Conquer</span><br>
+          Recursion depth: <span style="color:var(--gold)" id="rec-depth">3</span> levels
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>Tower of Hanoi Interactive Solver &middot; T(n) = 2&#8319; &minus; 1</footer>
+
+<script>
+const COLORS=['#E24B4A','#D85A30','#BA7517','#3B6D11','#0F6E56','#185FA5','#534AB7','#993556'];
+const RODS=['A','B','C'];
+let N=3,moves=[],animIdx=0,animTimer=null,isRunning=false;
+let animPeg=[[],[],[]],liftDisk=null,liftFrom=-1,liftTo=-1,animPhase='idle',animProgress=0;
+const canvas=document.getElementById('hanoi-canvas'),ctx=canvas.getContext('2d');
+function resize(){const W=canvas.parentElement.offsetWidth-56,dpr=window.devicePixelRatio||1;canvas.width=W*dpr;canvas.height=220*dpr;canvas.style.width=W+'px';canvas.style.height='220px';ctx.setTransform(dpr,0,0,dpr,0,0);draw();}
+window.addEventListener('resize',resize);
+function cw(){return parseInt(canvas.style.width)||canvas.offsetWidth;}
+function pegX(i){return[cw()*.18,cw()*.5,cw()*.82][i];}
+function diskW(d){const mn=30,mx=Math.min(cw()*.24,110);return mn+(d/N)*(mx-mn);}
+function diskH(){return Math.max(15,Math.floor(165/(N+2)));}
+function baseY(){return 200;}
+function rodH(){return 150;}
+function draw(){
+  const CW=cw();ctx.clearRect(0,0,CW,220);
+  ctx.fillStyle='rgba(255,255,255,0.08)';ctx.beginPath();ctx.roundRect(CW*.04,baseY()+2,CW*.92,7,3);ctx.fill();
+  for(let i=0;i<3;i++){const x=pegX(i);ctx.fillStyle='rgba(255,255,255,0.16)';ctx.beginPath();ctx.roundRect(x-3,baseY()-rodH(),6,rodH()+2,3);ctx.fill();ctx.fillStyle='rgba(232,230,220,0.35)';ctx.font='bold 11px system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='alphabetic';ctx.fillText(RODS[i],x,baseY()+20);}
+  const dh=diskH();
+  for(let p=0;p<3;p++)animPeg[p].forEach((d,j)=>drawDisk(d,pegX(p),baseY()-(j+1)*(dh+2),dh));
+  if(liftDisk!==null){const fx=pegX(liftFrom),tx=pegX(liftTo),fh=animPeg[liftFrom].length,th=animPeg[liftTo].length,hy=baseY()-rodH()-dh-14;let dx,dy;if(animPhase==='lift'){const sy=baseY()-(fh+1)*(dh+2);dx=fx;dy=sy+(hy-sy)*animProgress;}else if(animPhase==='slide'){dx=fx+(tx-fx)*animProgress;dy=hy;}else{const ey=baseY()-(th+1)*(dh+2);dx=tx;dy=hy+(ey-hy)*animProgress;}drawDisk(liftDisk,dx,dy,dh);}
+}
+function drawDisk(d,cx,y,dh){const w=diskW(d),color=COLORS[(d-1)%COLORS.length];ctx.save();ctx.beginPath();ctx.roundRect(cx-w/2,y,w,dh,dh/2);ctx.fillStyle=color;ctx.globalAlpha=.93;ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.25)';ctx.lineWidth=1;ctx.stroke();ctx.font=`bold ${Math.max(9,dh-5)}px 'Courier New',monospace`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='rgba(255,255,255,0.9)';ctx.globalAlpha=.9;ctx.fillText(d,cx,y+dh/2);ctx.restore();}
+function generateMoves(){moves=[];function h(n,f,t,a){if(!n)return;h(n-1,f,a,t);moves.push([f,t]);h(n-1,a,t,f);}h(N,0,2,1);}
+function buildTrace(){const b=document.getElementById('trace-body');b.innerHTML='';for(let k=1;k<=N;k++){const v=Math.pow(2,k)-1,tr=document.createElement('tr');tr.id='tr-'+k;tr.innerHTML=`<td>T(${k})</td><td>${k===1?'= 1 (base case)':`= 2\u00B7T(${k-1}) + 1 = 2\u00B7${Math.pow(2,k-1)-1} + 1`}</td><td>${v}</td>`;b.appendChild(tr);}}
+function highlightTrace(k){for(let i=1;i<=N;i++){const r=document.getElementById('tr-'+i);if(r)r.className=i===k?'trace-active':i<k?'trace-done':'';}}
+function updateFormula(){const t=Math.pow(2,N)-1;['fn-val','fn-n2','fn-exp'].forEach(id=>document.getElementById(id).textContent=N);document.getElementById('fn-result').textContent=t;document.getElementById('stat-total').textContent=t;document.getElementById('stat-rem').textContent=t;document.getElementById('stat-move').textContent='0';document.getElementById('rec-depth').textContent=N;}
+function onSlider(v){N=parseInt(v);document.getElementById('n-val').textContent=N;resetAll();}
+function resetAll(){if(animTimer){clearTimeout(animTimer);animTimer=null;}isRunning=false;animIdx=0;liftDisk=null;animPhase='idle';animPeg=[[],[],[]];for(let i=N;i>=1;i--)animPeg[0].push(i);generateMoves();buildTrace();updateFormula();document.getElementById('move-log').innerHTML='<div style="color:rgba(232,230,220,.2)">Moves appear here as animation plays...</div>';document.getElementById('done-msg').style.display='none';document.getElementById('btn-play').disabled=false;document.getElementById('prog-fill').style.width='0%';highlightTrace(0);draw();}
+function startAnim(){if(isRunning)return;isRunning=true;document.getElementById('btn-play').disabled=true;animateStep();}
+function animateStep(){if(animIdx>=moves.length){isRunning=false;liftDisk=null;document.getElementById('done-msg').style.display='block';document.getElementById('done-count').textContent=moves.length;draw();return;}
+const[from,to]=moves[animIdx],disk=animPeg[from][animPeg[from].length-1],speed=parseInt(document.getElementById('speed-sel').value),PHASES=['lift','slide','drop'],STEPS=20;let step=0,phaseIdx=0;liftDisk=disk;liftFrom=from;liftTo=to;
+function tick(){step++;animProgress=step/STEPS;animPhase=PHASES[phaseIdx];draw();if(step>=STEPS){step=0;phaseIdx++;if(phaseIdx>=3){animPeg[from].pop();animPeg[to].push(disk);liftDisk=null;animIdx++;const total=Math.pow(2,N)-1;document.getElementById('stat-move').textContent=animIdx;document.getElementById('stat-rem').textContent=total-animIdx;document.getElementById('prog-fill').style.width=((animIdx/total)*100).toFixed(1)+'%';const log=document.getElementById('move-log');if(log.querySelector('div[style]'))log.innerHTML='';const prev=log.querySelector('.latest');if(prev)prev.classList.remove('latest');const e=document.createElement('div');e.className='move-entry latest';e.textContent=`#${String(animIdx).padStart(3,'0')}  Disk ${disk}  ${RODS[from]} \u2192 ${RODS[to]}`;log.insertBefore(e,log.firstChild);highlightTrace(disk);draw();animTimer=setTimeout(animateStep,speed*.08);return;}}animTimer=setTimeout(tick,speed/STEPS);}tick();}
+window.addEventListener('load',()=>setTimeout(()=>{resize();resetAll();},60));
+</script>
+</body>
+</html>
